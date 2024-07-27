@@ -1,0 +1,449 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
+import 'package:lestate_tsd_new/Controlers/Goods.dart';
+
+class ScanningView extends StatefulWidget {
+  const ScanningView({super.key});
+
+  @override
+  State<ScanningView> createState() => _ScanningViewState();
+}
+
+class _ScanningViewState extends State<ScanningView> {
+  List<Goods> goods = [];
+  List<Goods> barcodeArray = [];
+  List<Goods> datamatrixArray = [];
+  List<Goods> noMarkingItems = [];
+
+  TextEditingController textMessageController = TextEditingController();
+  final TextEditingController batchController = TextEditingController();
+  final TextEditingController markingValueController = TextEditingController();
+  TextEditingController textTestController = TextEditingController();
+  static const EventChannel _eventChannel = EventChannel('scan_channel');
+  String _scanData = "";
+  bool _awaitingMarkingScan = false;
+  Goods? _currentMarkedItem;
+
+  @override
+  void initState() {
+    super.initState();
+    _eventChannel.receiveBroadcastStream().listen((event) {
+      _scanData = event;
+      if (_awaitingMarkingScan) {
+        processMarkingScan(_scanData);
+      } else {
+        scanning(_scanData);
+      }
+    });
+    getResult();
+  }
+
+  Future<void> getResult() async {
+    List<Goods> fetchedGoods = await Httpclient.getGoods();
+    setState(() {
+      goods = fetchedGoods;
+    });
+  }
+
+  void scanning(String scanData) async {
+    if (scanData.length == 13) {
+      Goods? foundItem = goods.firstWhere((item) => item.barcode == scanData);
+
+      if (foundItem != null) {
+        textTestController.text = foundItem.marking.toString();
+        if (foundItem.marking == true) {
+          setState(() {
+            _awaitingMarkingScan = true;
+            _currentMarkedItem = foundItem;
+          });
+          textMessageController.text =
+          "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
+        } else {
+          setState(() {
+            textMessageController.text = foundItem.vendorCode;
+            batchController.text = foundItem.batch.toString();
+            barcodeArray.add(foundItem);
+          });
+        }
+      } else {
+        showError();
+      }
+    } else {
+      String newScanData = scanData.substring(3, 16);
+      Goods? foundItem2 = goods.firstWhere((item) => item.barcode == newScanData);
+
+      if (foundItem2 != null) {
+        if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
+          showDuplicateMarkingError();
+        } else {
+          setState(() {
+            foundItem2.dataMatrix = scanData;
+            textMessageController.text = foundItem2.vendorCode;
+            batchController.text = foundItem2.batch.toString();
+            barcodeArray.add(foundItem2);
+            datamatrixArray.add(foundItem2);
+          });
+        }
+      } else {
+        showError();
+      }
+    }
+  }
+
+  void processMarkingScan(String scanData) {
+    if (_currentMarkedItem != null) {
+      if (scanData.length >= 20 &&
+          scanData.contains(_currentMarkedItem!.barcode)) {
+        if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
+          showDuplicateMarkingError();
+        } else {
+          setState(() {
+            _currentMarkedItem!.dataMatrix = scanData;
+            textMessageController.text = _currentMarkedItem!.vendorCode;
+            batchController.text = _currentMarkedItem!.batch.toString();
+            barcodeArray.add(_currentMarkedItem!);
+            datamatrixArray.add(_currentMarkedItem!);
+            _awaitingMarkingScan = false;
+            _currentMarkedItem = null;
+          });
+        }
+      } else {
+        showInvalidMarkingError();
+      }
+    }
+  }
+
+  void showInvalidMarkingError() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ошибка'),
+          content: const Text('Неверный код маркировки. Попробуйте снова.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showDuplicateMarkingError() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ошибка'),
+          content: const Text('Эта маркировка уже была отсканирована.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void showError() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ошибка'),
+          content: Text(Httpclient.error),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void sendResult() {
+    setState(() {
+      textMessageController.text = 'Данные отправлены!';
+    });
+  }
+
+  Future<void> onButtonClicked(String comment) async {
+    var itemStrings = barcodeArray
+        .map((item) => {'barcode': item.barcode, 'count': item.count})
+        .toList();
+    var itemStringsMatrix = datamatrixArray
+        .map((item) => {'barcode': item.barcode, 'datamatrix': item.dataMatrix})
+        .toList();
+    var body = {
+      'barcodeArray': itemStrings,
+      'datamatrixArray': itemStringsMatrix,
+      'comment': comment
+    };
+    String combinedString = jsonEncode(body);
+
+    await Httpclient.setMovementosGoods(combinedString);
+
+    if (Httpclient.result) {
+      sendResult();
+      setState(() {
+        barcodeArray.clear();
+        datamatrixArray.clear();
+        noMarkingItems.clear();
+      });
+    }
+  }
+
+  void handleNoMarking() {
+    if (_currentMarkedItem != null) {
+      setState(() {
+        _currentMarkedItem!.dataMatrix = 'Нет маркировки';
+        textMessageController.text = _currentMarkedItem!.vendorCode;
+        batchController.text = _currentMarkedItem!.batch.toString();
+
+        if (!barcodeArray.contains(_currentMarkedItem!)) {
+          barcodeArray.add(_currentMarkedItem!);
+        }
+        if (!datamatrixArray.contains(_currentMarkedItem!)) {
+          datamatrixArray.add(_currentMarkedItem!);
+        }
+        if (!noMarkingItems.contains(_currentMarkedItem!)) {
+          noMarkingItems.add(_currentMarkedItem!);
+        }
+
+        _awaitingMarkingScan = false;
+        _currentMarkedItem = null;
+      });
+    }
+  }
+
+  Future<void> showSendDialog() async {
+    TextEditingController commentController = TextEditingController();
+    FocusNode commentFocusNode = FocusNode();
+    bool isCommentEmpty = false;
+
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Wrap(
+                children: <Widget>[
+                  const ListTile(
+                    title: Text(
+                      'Подтверждение отправки',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('Общее кол-во товаров: ${barcodeArray.length}'),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: commentController,
+                          focusNode: commentFocusNode,
+                          decoration: InputDecoration(
+                            hintText: 'Введите комментарий',
+                            errorText: isCommentEmpty ? 'Комментарий обязателен' : null,
+                            errorStyle: const TextStyle(color: Colors.red),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isCommentEmpty ? Colors.red : Colors.blue,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(
+                                color: isCommentEmpty ? Colors.red : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: <Widget>[
+                            TextButton(
+                              child: const Text('Нет'),
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                            ),
+                            TextButton(
+                              child: const Text('Да'),
+                              onPressed: () {
+                                if (commentController.text.isEmpty) {
+                                  setState(() {
+                                    isCommentEmpty = true;
+                                  });
+                                  commentFocusNode.requestFocus();
+                                } else {
+                                  Navigator.of(context).pop();
+                                  onButtonClicked(commentController.text);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blueGrey,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              fit: BoxFit.contain,
+              height: 32,
+            ),
+            const SizedBox(width: 10),
+            const Text('Lestate TSD'),
+          ],
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          Column(
+            children: [
+              TextField(
+                controller: textMessageController,
+                readOnly: true,
+                textAlign: TextAlign.center,
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Общее кол-во товаров: ${barcodeArray.length}',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: barcodeArray.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    Goods item = barcodeArray[index];
+                    bool isMarked = item.marking && item.dataMatrix != null && item.dataMatrix != 'Нет маркировки';
+                    bool noMarking = noMarkingItems.contains(item);
+                    return ListTile(
+                      leading: Text('${index + 1}'),
+                      title: Text('Артикул: ${item.vendorCode}'),
+                      subtitle: Text('Характеристика: ${item.batch}'),
+                      trailing: item.marking
+                          ? Icon(
+                        isMarked
+                            ? Icons.check_circle
+                            : noMarking
+                            ? Icons.cancel
+                            : Icons.cancel,
+                        color: isMarked ? Colors.green : Colors.red,
+                      )
+                          : null,
+                      onTap: isMarked || !item.marking
+                          ? null
+                          : () {
+                        setState(() {
+                          _awaitingMarkingScan = true;
+                          _currentMarkedItem = item;
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+              DropdownButton<String>(
+                hint: const Text('Действия'),
+                items: const [
+                  DropdownMenuItem<String>(
+                    value: 'send',
+                    child: Text('Отправить'),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'clear',
+                    child: Text('Очистить'),
+                  ),
+                ],
+                onChanged: (String? value) {
+                  if (value == 'send') {
+                    showSendDialog();
+                  } else if (value == 'clear') {
+                    setState(() {
+                      barcodeArray.clear();
+                      datamatrixArray.clear();
+                      noMarkingItems.clear();
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+          if (_awaitingMarkingScan)
+            Center(
+              child: Container(
+                color: Colors.black54,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Отсканируйте маркировку для: ${_currentMarkedItem?.vendorCode}',
+                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: handleNoMarking,
+                      child: const Text('Нет маркировки (QR)'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const Positioned(
+            right: 10,
+            bottom: 10,
+            child: Text(
+              'v1.0.0',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
