@@ -213,7 +213,6 @@ class _ScanningViewState extends State<ScanningView> {
         _currentMarkedItem!.dataMatrix = 'Нет маркировки';
         textMessageController.text = _currentMarkedItem!.vendorCode;
         batchController.text = _currentMarkedItem!.batch.toString();
-
         if (!barcodeArray.contains(_currentMarkedItem!)) {
           barcodeArray.add(_currentMarkedItem!);
         }
@@ -223,7 +222,6 @@ class _ScanningViewState extends State<ScanningView> {
         if (!noMarkingItems.contains(_currentMarkedItem!)) {
           noMarkingItems.add(_currentMarkedItem!);
         }
-
         _awaitingMarkingScan = false;
         _currentMarkedItem = null;
       });

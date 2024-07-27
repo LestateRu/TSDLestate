@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 import 'package:path_provider/path_provider.dart';
@@ -25,15 +24,12 @@ class Httpclient {
         final directory = await getTemporaryDirectory();
         final filePath = '${directory.path}/barcodes.zip';
 
-        // Write the ZIP file to disk
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
-        // Read the ZIP file
         final bytes = file.readAsBytesSync();
         final archive = ZipDecoder().decodeBytes(bytes);
 
-        // Find and read the JSON file from the archive
         for (final file in archive) {
           if (file.name.endsWith('.json')) {
             final jsonContent = utf8.decode(file.content as List<int>);
@@ -43,7 +39,6 @@ class Httpclient {
             return goods;
           }
         }
-        // Handle the case where no JSON file is found
         error = 'JSON файл не найден в архиве.';
       } else if (response.statusCode == 401) {
         error = 'Неверный логин или пароль';

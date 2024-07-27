@@ -6,8 +6,6 @@ class Goods {
   String dataMatrix ='';
   int count = 1;
 
-
-
   Goods({
     required this.vendorCode,
     required this.marking,
