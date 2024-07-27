@@ -8,7 +8,7 @@ void main() {
     theme: ThemeData(
       primaryColor: Colors.blueGrey,
     ),
-    home: Login(),
+    home: const Login(),
   ));
 }
 

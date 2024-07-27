@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 class Goods {
   final String vendorCode;
   final bool marking;
