@@ -117,7 +117,6 @@ class _LoginState extends State<Login> {
     if (goods.isEmpty) {
       return false;
     } else {
-      // Handle the case where goods were successfully fetched
       return true;
     }
   }
