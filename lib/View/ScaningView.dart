@@ -64,7 +64,7 @@ class _ScanningViewState extends State<ScanningView> {
           setState(() {
             textMessageController.text = foundItem.vendorCode;
             batchController.text = foundItem.batch.toString();
-            barcodeArray.add(foundItem);
+            barcodeArray.insert(0, foundItem);
           });
         }
       } else {
@@ -78,12 +78,19 @@ class _ScanningViewState extends State<ScanningView> {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
           showDuplicateMarkingError();
         } else {
+          Goods newItem = Goods(
+            barcode: foundItem2.barcode,
+            vendorCode: foundItem2.vendorCode,
+            batch: foundItem2.batch,
+            marking: foundItem2.marking,
+            dataMatrix: scanData,
+            count: foundItem2.count,
+          );
           setState(() {
-            foundItem2.dataMatrix = scanData;
             textMessageController.text = foundItem2.vendorCode;
             batchController.text = foundItem2.batch.toString();
-            barcodeArray.add(foundItem2);
-            datamatrixArray.add(foundItem2);
+            barcodeArray.insert(0, newItem);
+            datamatrixArray.insert(0, newItem);
           });
         }
       } else {
@@ -99,12 +106,19 @@ class _ScanningViewState extends State<ScanningView> {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
           showDuplicateMarkingError();
         } else {
+          Goods newItem = Goods(
+            barcode: _currentMarkedItem!.barcode,
+            vendorCode: _currentMarkedItem!.vendorCode,
+            batch: _currentMarkedItem!.batch,
+            marking: _currentMarkedItem!.marking,
+            dataMatrix: scanData,
+            count: _currentMarkedItem!.count,
+          );
           setState(() {
-            _currentMarkedItem!.dataMatrix = scanData;
             textMessageController.text = _currentMarkedItem!.vendorCode;
             batchController.text = _currentMarkedItem!.batch.toString();
-            barcodeArray.add(_currentMarkedItem!);
-            datamatrixArray.add(_currentMarkedItem!);
+            barcodeArray.insert(0, newItem);
+            datamatrixArray.insert(0, newItem);
             _awaitingMarkingScan = false;
             _currentMarkedItem = null;
           });
@@ -209,19 +223,20 @@ class _ScanningViewState extends State<ScanningView> {
 
   void handleNoMarking() {
     if (_currentMarkedItem != null) {
+      Goods newItem = Goods(
+        barcode: _currentMarkedItem!.barcode,
+        vendorCode: _currentMarkedItem!.vendorCode,
+        batch: _currentMarkedItem!.batch,
+        marking: _currentMarkedItem!.marking,
+        dataMatrix: 'Нет маркировки',
+        count: _currentMarkedItem!.count,
+      );
       setState(() {
-        _currentMarkedItem!.dataMatrix = 'Нет маркировки';
         textMessageController.text = _currentMarkedItem!.vendorCode;
         batchController.text = _currentMarkedItem!.batch.toString();
-        if (!barcodeArray.contains(_currentMarkedItem!)) {
-          barcodeArray.add(_currentMarkedItem!);
-        }
-        if (!datamatrixArray.contains(_currentMarkedItem!)) {
-          datamatrixArray.add(_currentMarkedItem!);
-        }
-        if (!noMarkingItems.contains(_currentMarkedItem!)) {
-          noMarkingItems.add(_currentMarkedItem!);
-        }
+        barcodeArray.insert(0, newItem);
+        datamatrixArray.insert(0, newItem);
+        noMarkingItems.add(newItem);
         _awaitingMarkingScan = false;
         _currentMarkedItem = null;
       });

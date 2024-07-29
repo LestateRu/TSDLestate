@@ -11,7 +11,7 @@ import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.EventChannel;
 
 public class MainActivity extends FlutterActivity {
-    private static final String SCAN_ACTION = "com.xcheng.scanner.action.BARCODE_DECODING_BROADCAST";
+    private static final String SCAN_ACTION = "BARCODE_BROADCAST";
     private static final String CHANNEL = "scan_channel";
     private BroadcastReceiver scanReceiver;
     private EventChannel.EventSink eventSink;
@@ -27,7 +27,7 @@ public class MainActivity extends FlutterActivity {
                         scanReceiver = new BroadcastReceiver() {
                             @Override
                             public void onReceive(Context context, Intent intent) {
-                                String scanData = intent.getStringExtra("EXTRA_BARCODE_DECODING_DATA");
+                                String scanData = intent.getStringExtra("BARCODE_DATA");
                                 if (scanData != null && eventSink != null) {
                                     eventSink.success(scanData);
                                 }
