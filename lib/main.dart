@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:lestate_tsd_new/View/Login.dart';
 
 void main() {
-  HttpOverrides.global = MyHttpOverrides(); // удалить при релизе
+ // HttpOverrides.global = MyHttpOverrides(); // удалить при релизе
   runApp(MaterialApp(
     theme: ThemeData(
       primaryColor: Colors.blueGrey,
@@ -12,6 +12,7 @@ void main() {
   ));
 }
 
+/*
 // удалить при релизе
 class MyHttpOverrides extends HttpOverrides {
   @override
@@ -20,4 +21,4 @@ class MyHttpOverrides extends HttpOverrides {
       ..badCertificateCallback =
           (X509Certificate cert, String host, int port) => true;
   }
-}
+}*/

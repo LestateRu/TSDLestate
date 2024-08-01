@@ -23,6 +23,7 @@ class _ScanningViewState extends State<ScanningView> {
   TextEditingController textTestController = TextEditingController();
   static const EventChannel _eventChannel = EventChannel('scan_channel');
   String _scanData = "";
+  String zerro = '0';
   bool _awaitingMarkingScan = false;
   Goods? _currentMarkedItem;
 
@@ -48,6 +49,10 @@ class _ScanningViewState extends State<ScanningView> {
   }
 
   void scanning(String scanData) async {
+    if (scanData.length == 12) {
+      scanData = '0' + scanData;
+    }
+
     if (scanData.length == 13) {
       Goods? foundItem = goods.firstWhere((item) => item.barcode == scanData);
 
@@ -59,7 +64,7 @@ class _ScanningViewState extends State<ScanningView> {
             _currentMarkedItem = foundItem;
           });
           textMessageController.text =
-          "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
+              "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
         } else {
           setState(() {
             textMessageController.text = foundItem.vendorCode;
@@ -72,7 +77,8 @@ class _ScanningViewState extends State<ScanningView> {
       }
     } else {
       String newScanData = scanData.substring(3, 16);
-      Goods? foundItem2 = goods.firstWhere((item) => item.barcode == newScanData);
+      Goods? foundItem2 =
+          goods.firstWhere((item) => item.barcode == newScanData);
 
       if (foundItem2 != null) {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
@@ -263,7 +269,8 @@ class _ScanningViewState extends State<ScanningView> {
                   const ListTile(
                     title: Text(
                       'Подтверждение отправки',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Padding(
@@ -278,16 +285,20 @@ class _ScanningViewState extends State<ScanningView> {
                           focusNode: commentFocusNode,
                           decoration: InputDecoration(
                             hintText: 'Введите комментарий',
-                            errorText: isCommentEmpty ? 'Комментарий обязателен' : null,
+                            errorText: isCommentEmpty
+                                ? 'Комментарий обязателен'
+                                : null,
                             errorStyle: const TextStyle(color: Colors.red),
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: isCommentEmpty ? Colors.red : Colors.blue,
+                                color:
+                                    isCommentEmpty ? Colors.red : Colors.blue,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                color: isCommentEmpty ? Colors.red : Colors.grey,
+                                color:
+                                    isCommentEmpty ? Colors.red : Colors.grey,
                               ),
                             ),
                           ),
@@ -362,7 +373,8 @@ class _ScanningViewState extends State<ScanningView> {
                 padding: const EdgeInsets.all(8.0),
                 child: Text(
                   'Общее кол-во товаров: ${barcodeArray.length}',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold),
                 ),
               ),
               Expanded(
@@ -370,7 +382,9 @@ class _ScanningViewState extends State<ScanningView> {
                   itemCount: barcodeArray.length,
                   itemBuilder: (BuildContext context, int index) {
                     Goods item = barcodeArray[index];
-                    bool isMarked = item.marking && item.dataMatrix != null && item.dataMatrix != 'Нет маркировки';
+                    bool isMarked = item.marking &&
+                        item.dataMatrix != null &&
+                        item.dataMatrix != 'Нет маркировки';
                     bool noMarking = noMarkingItems.contains(item);
                     return ListTile(
                       leading: Text('${index + 1}'),
@@ -378,22 +392,22 @@ class _ScanningViewState extends State<ScanningView> {
                       subtitle: Text('Характеристика: ${item.batch}'),
                       trailing: item.marking
                           ? Icon(
-                        isMarked
-                            ? Icons.check_circle
-                            : noMarking
-                            ? Icons.cancel
-                            : Icons.cancel,
-                        color: isMarked ? Colors.green : Colors.red,
-                      )
+                              isMarked
+                                  ? Icons.check_circle
+                                  : noMarking
+                                      ? Icons.cancel
+                                      : Icons.cancel,
+                              color: isMarked ? Colors.green : Colors.red,
+                            )
                           : null,
                       onTap: isMarked || !item.marking
                           ? null
                           : () {
-                        setState(() {
-                          _awaitingMarkingScan = true;
-                          _currentMarkedItem = item;
-                        });
-                      },
+                              setState(() {
+                                _awaitingMarkingScan = true;
+                                _currentMarkedItem = item;
+                              });
+                            },
                     );
                   },
                 ),
@@ -435,7 +449,8 @@ class _ScanningViewState extends State<ScanningView> {
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
                         'Отсканируйте маркировку для: ${_currentMarkedItem?.vendorCode}',
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 18),
                         textAlign: TextAlign.center,
                       ),
                     ),
