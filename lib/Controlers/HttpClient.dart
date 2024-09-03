@@ -10,7 +10,7 @@ class Httpclient {
   static bool result = false;
 
   static Future<List<Goods>> getGoods() async {
-    String basicAuth = 'Basic ' + base64Encode(utf8.encode('$username:$password'));
+    String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
 
     List<Goods> goods = [];
 
@@ -55,7 +55,7 @@ class Httpclient {
   }
 
   static Future<void> setMovementosGoods(String to1c) async {
-    String basicAuth = 'Basic ' + base64Encode(utf8.encode('$username:$password'));
+    String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
 
     try {
       final response = await http.post(

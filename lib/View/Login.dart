@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/View/ScaningView.dart';
+import 'package:lestate_tsd_new/main.dart';
+
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -13,6 +15,14 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   TextEditingController _username = TextEditingController();
   TextEditingController _password = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -68,14 +78,7 @@ class _LoginState extends State<Login> {
               ],
             ),
           ),
-          const Positioned(
-            right: 10,
-            bottom: 10,
-            child: Text(
-              'v1.0.0',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
+
         ],
       ),
     );

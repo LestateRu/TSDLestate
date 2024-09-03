@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
+import 'package:lestate_tsd_new/main.dart';
 
 class ScanningView extends StatefulWidget {
   const ScanningView({super.key});
@@ -64,7 +65,7 @@ class _ScanningViewState extends State<ScanningView> {
             _currentMarkedItem = foundItem;
           });
           textMessageController.text =
-              "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
+          "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
         } else {
           setState(() {
             textMessageController.text = foundItem.vendorCode;
@@ -78,7 +79,7 @@ class _ScanningViewState extends State<ScanningView> {
     } else {
       String newScanData = scanData.substring(3, 16);
       Goods? foundItem2 =
-          goods.firstWhere((item) => item.barcode == newScanData);
+      goods.firstWhere((item) => item.barcode == newScanData);
 
       if (foundItem2 != null) {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
@@ -227,6 +228,22 @@ class _ScanningViewState extends State<ScanningView> {
     }
   }
 
+  void deleteLastScannedItem() {
+    setState(() {
+      if (barcodeArray.isNotEmpty) {
+        Goods lastItem = barcodeArray.removeAt(0);
+
+        // Если у элемента есть DataMatrix код, удаляем его также из datamatrixArray
+        if (lastItem.dataMatrix != null && lastItem.dataMatrix!.isNotEmpty) {
+          datamatrixArray.removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
+        }
+
+        // Удаляем также из списка noMarkingItems, если элемент был без маркировки
+        noMarkingItems.removeWhere((item) => item.barcode == lastItem.barcode);
+      }
+    });
+  }
+
   void handleNoMarking() {
     if (_currentMarkedItem != null) {
       Goods newItem = Goods(
@@ -270,7 +287,7 @@ class _ScanningViewState extends State<ScanningView> {
                     title: Text(
                       'Подтверждение отправки',
                       style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Padding(
@@ -292,13 +309,13 @@ class _ScanningViewState extends State<ScanningView> {
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color:
-                                    isCommentEmpty ? Colors.red : Colors.blue,
+                                isCommentEmpty ? Colors.red : Colors.blue,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color:
-                                    isCommentEmpty ? Colors.red : Colors.grey,
+                                isCommentEmpty ? Colors.red : Colors.grey,
                               ),
                             ),
                           ),
@@ -392,22 +409,22 @@ class _ScanningViewState extends State<ScanningView> {
                       subtitle: Text('Характеристика: ${item.batch}'),
                       trailing: item.marking
                           ? Icon(
-                              isMarked
-                                  ? Icons.check_circle
-                                  : noMarking
-                                      ? Icons.cancel
-                                      : Icons.cancel,
-                              color: isMarked ? Colors.green : Colors.red,
-                            )
+                        isMarked
+                            ? Icons.check_circle
+                            : noMarking
+                            ? Icons.cancel
+                            : Icons.cancel,
+                        color: isMarked ? Colors.green : Colors.red,
+                      )
                           : null,
                       onTap: isMarked || !item.marking
                           ? null
                           : () {
-                              setState(() {
-                                _awaitingMarkingScan = true;
-                                _currentMarkedItem = item;
-                              });
-                            },
+                        setState(() {
+                          _awaitingMarkingScan = true;
+                          _currentMarkedItem = item;
+                        });
+                      },
                     );
                   },
                 ),
@@ -423,6 +440,10 @@ class _ScanningViewState extends State<ScanningView> {
                     value: 'clear',
                     child: Text('Очистить'),
                   ),
+                  DropdownMenuItem<String>(
+                    value: 'del',
+                    child: Text('Удалить товар'),
+                  ),
                 ],
                 onChanged: (String? value) {
                   if (value == 'send') {
@@ -433,6 +454,8 @@ class _ScanningViewState extends State<ScanningView> {
                       datamatrixArray.clear();
                       noMarkingItems.clear();
                     });
+                  } else if (value == 'del') {
+                    deleteLastScannedItem();
                   }
                 },
               ),
@@ -450,7 +473,7 @@ class _ScanningViewState extends State<ScanningView> {
                       child: Text(
                         'Отсканируйте маркировку для: ${_currentMarkedItem?.vendorCode}',
                         style:
-                            const TextStyle(color: Colors.white, fontSize: 18),
+                        const TextStyle(color: Colors.white, fontSize: 18),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -462,14 +485,7 @@ class _ScanningViewState extends State<ScanningView> {
                 ),
               ),
             ),
-          const Positioned(
-            right: 10,
-            bottom: 10,
-            child: Text(
-              'v1.0.0',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ),
+
         ],
       ),
     );
