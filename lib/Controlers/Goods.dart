@@ -25,4 +25,14 @@ class Goods {
       count: 1
     );
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'vendorCode': vendorCode,
+      'marking': marking,
+      'barcode': barcode,
+      'batch': batch,
+      'dataMatrix': dataMatrix,
+      'count': count,
+    };
+  }
 }

@@ -16,6 +16,7 @@ class _LoginState extends State<Login> {
   TextEditingController _username = TextEditingController();
   TextEditingController _password = TextEditingController();
 
+
   @override
   void initState() {
     super.initState();
@@ -75,19 +76,20 @@ class _LoginState extends State<Login> {
                   },
                   child: const Text('Авторизация'),
                 ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  Che
-                });
-              },
-              child: const Text('Обновление'),
-            )
               ],
-
             ),
           ),
-
+          Positioned(
+            bottom: 16.0,
+            right: 16.0,
+            child: Text(
+              'Версия: 1.1.5',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
         ],
       ),
     );

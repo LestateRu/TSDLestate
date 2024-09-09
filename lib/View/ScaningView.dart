@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
-import 'package:lestate_tsd_new/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';  // Добавлено
 
 class ScanningView extends StatefulWidget {
   const ScanningView({super.key});
@@ -18,6 +18,7 @@ class _ScanningViewState extends State<ScanningView> {
   List<Goods> datamatrixArray = [];
   List<Goods> noMarkingItems = [];
 
+  // Controllers and other variables
   TextEditingController textMessageController = TextEditingController();
   final TextEditingController batchController = TextEditingController();
   final TextEditingController markingValueController = TextEditingController();
@@ -40,6 +41,7 @@ class _ScanningViewState extends State<ScanningView> {
       }
     });
     getResult();
+    loadSavedItems();  // Загрузка сохраненных данных при запуске
   }
 
   Future<void> getResult() async {
@@ -47,6 +49,44 @@ class _ScanningViewState extends State<ScanningView> {
     setState(() {
       goods = fetchedGoods;
     });
+  }
+
+  // Сохранение списка отсканированных товаров
+  Future<void> saveItems() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String> barcodeJson = barcodeArray.map((item) => jsonEncode(item.toJson())).toList();
+    List<String> datamatrixJson = datamatrixArray.map((item) => jsonEncode(item.toJson())).toList();
+    List<String> noMarkingJson = noMarkingItems.map((item) => jsonEncode(item.toJson())).toList();
+
+    await prefs.setStringList('barcodeArray', barcodeJson);
+    await prefs.setStringList('datamatrixArray', datamatrixJson);
+    await prefs.setStringList('noMarkingItems', noMarkingJson);
+  }
+
+  // Загрузка сохраненных данных
+  Future<void> loadSavedItems() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    List<String>? barcodeJson = prefs.getStringList('barcodeArray');
+    List<String>? datamatrixJson = prefs.getStringList('datamatrixArray');
+    List<String>? noMarkingJson = prefs.getStringList('noMarkingItems');
+
+    if (barcodeJson != null) {
+      setState(() {
+        barcodeArray = barcodeJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
+      });
+    }
+
+    if (datamatrixJson != null) {
+      setState(() {
+        datamatrixArray = datamatrixJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
+      });
+    }
+
+    if (noMarkingJson != null) {
+      setState(() {
+        noMarkingItems = noMarkingJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
+      });
+    }
   }
 
   void scanning(String scanData) async {
@@ -64,13 +104,13 @@ class _ScanningViewState extends State<ScanningView> {
             _awaitingMarkingScan = true;
             _currentMarkedItem = foundItem;
           });
-          textMessageController.text =
-          "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
+          textMessageController.text = "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
         } else {
           setState(() {
             textMessageController.text = foundItem.vendorCode;
             batchController.text = foundItem.batch.toString();
             barcodeArray.insert(0, foundItem);
+            saveItems();  // Сохранение после добавления
           });
         }
       } else {
@@ -78,8 +118,7 @@ class _ScanningViewState extends State<ScanningView> {
       }
     } else {
       String newScanData = scanData.substring(3, 16);
-      Goods? foundItem2 =
-      goods.firstWhere((item) => item.barcode == newScanData);
+      Goods? foundItem2 = goods.firstWhere((item) => item.barcode == newScanData);
 
       if (foundItem2 != null) {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
@@ -98,6 +137,7 @@ class _ScanningViewState extends State<ScanningView> {
             batchController.text = foundItem2.batch.toString();
             barcodeArray.insert(0, newItem);
             datamatrixArray.insert(0, newItem);
+            saveItems();  // Сохранение после добавления
           });
         }
       } else {
@@ -235,7 +275,8 @@ class _ScanningViewState extends State<ScanningView> {
 
         // Если у элемента есть DataMatrix код, удаляем его также из datamatrixArray
         if (lastItem.dataMatrix != null && lastItem.dataMatrix!.isNotEmpty) {
-          datamatrixArray.removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
+          datamatrixArray
+              .removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
         }
 
         // Удаляем также из списка noMarkingItems, если элемент был без маркировки
@@ -287,7 +328,7 @@ class _ScanningViewState extends State<ScanningView> {
                     title: Text(
                       'Подтверждение отправки',
                       style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Padding(
@@ -309,13 +350,13 @@ class _ScanningViewState extends State<ScanningView> {
                             focusedBorder: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color:
-                                isCommentEmpty ? Colors.red : Colors.blue,
+                                    isCommentEmpty ? Colors.red : Colors.blue,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
                                 color:
-                                isCommentEmpty ? Colors.red : Colors.grey,
+                                    isCommentEmpty ? Colors.red : Colors.grey,
                               ),
                             ),
                           ),
@@ -409,22 +450,22 @@ class _ScanningViewState extends State<ScanningView> {
                       subtitle: Text('Характеристика: ${item.batch}'),
                       trailing: item.marking
                           ? Icon(
-                        isMarked
-                            ? Icons.check_circle
-                            : noMarking
-                            ? Icons.cancel
-                            : Icons.cancel,
-                        color: isMarked ? Colors.green : Colors.red,
-                      )
+                              isMarked
+                                  ? Icons.check_circle
+                                  : noMarking
+                                      ? Icons.cancel
+                                      : Icons.cancel,
+                              color: isMarked ? Colors.green : Colors.red,
+                            )
                           : null,
                       onTap: isMarked || !item.marking
                           ? null
                           : () {
-                        setState(() {
-                          _awaitingMarkingScan = true;
-                          _currentMarkedItem = item;
-                        });
-                      },
+                              setState(() {
+                                _awaitingMarkingScan = true;
+                                _currentMarkedItem = item;
+                              });
+                            },
                     );
                   },
                 ),
@@ -461,6 +502,17 @@ class _ScanningViewState extends State<ScanningView> {
               ),
             ],
           ),
+          Positioned(
+            bottom: 16.0,
+            right: 16.0,
+            child: Text(
+              'Версия: 1.1.5',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+          ),
           if (_awaitingMarkingScan)
             Center(
               child: Container(
@@ -473,7 +525,7 @@ class _ScanningViewState extends State<ScanningView> {
                       child: Text(
                         'Отсканируйте маркировку для: ${_currentMarkedItem?.vendorCode}',
                         style:
-                        const TextStyle(color: Colors.white, fontSize: 18),
+                            const TextStyle(color: Colors.white, fontSize: 18),
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -485,7 +537,6 @@ class _ScanningViewState extends State<ScanningView> {
                 ),
               ),
             ),
-
         ],
       ),
     );

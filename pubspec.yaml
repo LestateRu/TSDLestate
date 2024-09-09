@@ -1,7 +1,7 @@
 name: lestate_tsd_new
 description: "Приложение ТСД для компании Lestate."
 
-version: 1.0.0
+version: 1.1.5
 
 environment:
   sdk: '>=3.4.3 <4.0.0'
@@ -19,6 +19,9 @@ dependencies:
   material_color_utilities: ^0.11.1
   flutter_app_update: ^3.1.0
   open_file: ^3.5.3
+  app_installer: ^1.2.0
+  shared_preferences: ^2.3.2
+
 
 dev_dependencies:
   flutter_test:

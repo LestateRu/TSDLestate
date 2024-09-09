@@ -5,12 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:open_file/open_file.dart';
+import 'package:app_installer/app_installer.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  bool isDebug = false;
+  bool isDebug = true;
   assert(isDebug = true);
   if (isDebug) {
     HttpOverrides.global = MyHttpOverrides();
@@ -24,26 +24,22 @@ void main() async {
 
 // Проверка и запрос разрешений
 Future<void> _checkPermissions() async {
-  if (await Permission.storage.request().isGranted) {
-    // Разрешение на доступ к хранилищу предоставлено
+  final storageStatus = await Permission.storage.request();
+  final installStatus = await Permission.manageExternalStorage.request();
+
+  if (storageStatus.isGranted && installStatus.isGranted) {
   } else {
-    // Разрешение не предоставлено, вы можете запросить его снова
-    await Permission.storage.request();
+    // Разрешения не предоставлены, запросим их снова
+    if (!storageStatus.isGranted) {
+      await Permission.storage.request();
+    }
+    if (!installStatus.isGranted) {
+      await Permission.manageExternalStorage.request();
+    }
   }
 }
 
-class MyApp extends StatefulWidget {
-  @override
-  _MyAppState createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  @override
-  void initState() {
-    super.initState();
-    checkForUpdate(); // Проверка обновления при запуске приложения
-  }
-
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -51,14 +47,46 @@ class _MyAppState extends State<MyApp> {
       theme: ThemeData(
         primaryColor: Colors.blueGrey,
       ),
-      home: const Login(),
+      home: UpdateChecker(),
+    );
+  }
+}
+
+class UpdateChecker extends StatefulWidget {
+  @override
+  _UpdateCheckerState createState() => _UpdateCheckerState();
+}
+
+class _UpdateCheckerState extends State<UpdateChecker> {
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: checkForUpdate(),
+      builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return const Scaffold(
+            body: Center(child: Text('Ошибка при проверке обновлений')),
+          );
+        } else {
+          return const Login();
+        }
+      },
     );
   }
 
-  // Проверка наличия обновлений
   Future<void> checkForUpdate() async {
-    const String currentVersion = '1.0.0'; // Текущая версия приложения
-    const String versionUrl = 'http://1c.sportpoint.ru:5055/tsd/version.json'; // URL JSON-файла с версией
+    String currentVersion = '1.1.5';
+    const String versionUrl = 'http://1c.sportpoint.ru:5055/tsd/version.json';
 
     try {
       final response = await http.get(Uri.parse(versionUrl));
@@ -69,8 +97,6 @@ class _MyAppState extends State<MyApp> {
 
         if (latestVersion != currentVersion) {
           _showUpdateDialog(context, apkUrl);
-        } else {
-          showNoUpdateDialog(context);
         }
       } else {
         showErrorDialog(context, 'Ошибка проверки обновления. Код: ${response.statusCode}');
@@ -80,7 +106,6 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // Показать диалоговое окно для обновления
   void _showUpdateDialog(BuildContext context, String apkUrl) {
     showDialog(
       context: context,
@@ -108,31 +133,56 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  // Загрузка и установка APK
   Future<void> _downloadAndInstallApk(String apkUrl) async {
-    try {
-      final directory = await getTemporaryDirectory();
-      final filePath = '${directory.path}/yourapp.apk';
+    // Показать диалог с индикатором загрузки
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Запретить закрытие диалога при нажатии вне его
+      builder: (BuildContext context) {
+        return const Dialog(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Загрузка...'),
+              ],
+            ),
+          ),
+        );
+      },
+    );
 
-      // Загрузка APK с сервера
+    try {
+      final directory = await getExternalStorageDirectory();
+      final filePath = '${directory!.path}/yourapp.apk';
+
       final response = await http.get(Uri.parse(apkUrl));
       if (response.statusCode == 200) {
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
-        // Открытие APK для установки
-        final result = await OpenFile.open(filePath);
-        print('OpenFile result: ${result.message}');
+        // Закрыть диалог загрузки
+        Navigator.of(context, rootNavigator: true).pop();
+
+        // Используем `app_installer` для установки APK
+        AppInstaller.installApk(filePath).then((_) {
+        }).catchError((e) {
+          showErrorDialog(context, 'Произошла ошибка при установке APK: $e');
+        });
       } else {
+        Navigator.of(context, rootNavigator: true).pop(); // Закрыть диалог загрузки
         showErrorDialog(context, 'Ошибка загрузки APK. Код ответа: ${response.statusCode}');
       }
     } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop(); // Закрыть диалог загрузки
       showErrorDialog(context, 'Произошла ошибка при загрузке APK: $e');
     }
   }
 }
 
-// HttpOverrides класс для использования в отладочном режиме
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -143,26 +193,6 @@ class MyHttpOverrides extends HttpOverrides {
 }
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-void showNoUpdateDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('Нет доступных обновлений'),
-        content: const Text('Вы используете самую актуальную версию приложения.'),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
 
 void showErrorDialog(BuildContext context, String message) {
   showDialog(

@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.test_tsd">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="ru.lestate.lestate_tsd_new">
 
     <!-- Разрешения -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -8,10 +9,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-
     <application
         android:label="TSD Lestate"
         android:icon="@mipmap/lestate_icon">
+
         <activity
             android:name=".MainActivity"
             android:launchMode="singleTop"
@@ -25,9 +26,20 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- Добавляем provider для установки APK -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
     </application>
-
 </manifest>
