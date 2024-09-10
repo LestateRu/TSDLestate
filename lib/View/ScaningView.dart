@@ -1,9 +1,10 @@
 import 'dart:convert';
+import 'dart:io';  // Импорт пакета dart:io для работы с файлами
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';  // Импорт path_provider для получения пути к файлу
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
-import 'package:shared_preferences/shared_preferences.dart';  // Добавлено
 
 class ScanningView extends StatefulWidget {
   const ScanningView({super.key});
@@ -28,6 +29,7 @@ class _ScanningViewState extends State<ScanningView> {
   String zerro = '0';
   bool _awaitingMarkingScan = false;
   Goods? _currentMarkedItem;
+  late File saveFile;  // Файл для сохранения данных
 
   @override
   void initState() {
@@ -41,7 +43,7 @@ class _ScanningViewState extends State<ScanningView> {
       }
     });
     getResult();
-    loadSavedItems();  // Загрузка сохраненных данных при запуске
+    initializeFile();  // Инициализация файла
   }
 
   Future<void> getResult() async {
@@ -51,42 +53,51 @@ class _ScanningViewState extends State<ScanningView> {
     });
   }
 
-  // Сохранение списка отсканированных товаров
-  Future<void> saveItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> barcodeJson = barcodeArray.map((item) => jsonEncode(item.toJson())).toList();
-    List<String> datamatrixJson = datamatrixArray.map((item) => jsonEncode(item.toJson())).toList();
-    List<String> noMarkingJson = noMarkingItems.map((item) => jsonEncode(item.toJson())).toList();
+  // Инициализация файла для сохранения данных
+  Future<void> initializeFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    saveFile = File('${directory.path}/save.json');
 
-    await prefs.setStringList('barcodeArray', barcodeJson);
-    await prefs.setStringList('datamatrixArray', datamatrixJson);
-    await prefs.setStringList('noMarkingItems', noMarkingJson);
+    if (!(await saveFile.exists())) {
+      await saveFile.create();  // Создаем файл, если его нет
+      await saveFile.writeAsString(jsonEncode({
+        'barcodeArray': [],
+        'datamatrixArray': [],
+        'noMarkingItems': [],
+      }));
+    }
+
+    loadSavedItems();  // Загружаем сохранённые элементы, если есть
   }
 
-  // Загрузка сохраненных данных
+  // Загрузка данных из файла
   Future<void> loadSavedItems() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String>? barcodeJson = prefs.getStringList('barcodeArray');
-    List<String>? datamatrixJson = prefs.getStringList('datamatrixArray');
-    List<String>? noMarkingJson = prefs.getStringList('noMarkingItems');
+    String content = await saveFile.readAsString();
+    if (content.isNotEmpty) {
+      Map<String, dynamic> jsonData = jsonDecode(content);
 
-    if (barcodeJson != null) {
       setState(() {
-        barcodeArray = barcodeJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
+        barcodeArray = (jsonData['barcodeArray'] as List)
+            .map((item) => Goods.fromJson(item))
+            .toList();
+        datamatrixArray = (jsonData['datamatrixArray'] as List)
+            .map((item) => Goods.fromJson(item))
+            .toList();
+        noMarkingItems = (jsonData['noMarkingItems'] as List)
+            .map((item) => Goods.fromJson(item))
+            .toList();
       });
     }
+  }
 
-    if (datamatrixJson != null) {
-      setState(() {
-        datamatrixArray = datamatrixJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
-      });
-    }
-
-    if (noMarkingJson != null) {
-      setState(() {
-        noMarkingItems = noMarkingJson.map((item) => Goods.fromJson(jsonDecode(item))).toList();
-      });
-    }
+  // Сохранение данных в файл
+  Future<void> saveItems() async {
+    Map<String, dynamic> jsonData = {
+      'barcodeArray': barcodeArray.map((item) => item.toJson()).toList(),
+      'datamatrixArray': datamatrixArray.map((item) => item.toJson()).toList(),
+      'noMarkingItems': noMarkingItems.map((item) => item.toJson()).toList(),
+    };
+    await saveFile.writeAsString(jsonEncode(jsonData));
   }
 
   void scanning(String scanData) async {
@@ -259,28 +270,34 @@ class _ScanningViewState extends State<ScanningView> {
     await Httpclient.setMovementosGoods(combinedString);
 
     if (Httpclient.result) {
-      sendResult();
-      setState(() {
-        barcodeArray.clear();
-        datamatrixArray.clear();
-        noMarkingItems.clear();
-      });
+      clearItems();
     }
   }
 
-  void deleteLastScannedItem() {
+  // Очистка списка и файла
+  void clearItems() async {
     setState(() {
+      barcodeArray.clear();
+      datamatrixArray.clear();
+      noMarkingItems.clear();
+    });
+    await saveFile.writeAsString(jsonEncode({
+      'barcodeArray': [],
+      'datamatrixArray': [],
+      'noMarkingItems': [],
+    }));
+  }
+
+  void deleteLastScannedItem() {
+    setState(() async {
       if (barcodeArray.isNotEmpty) {
         Goods lastItem = barcodeArray.removeAt(0);
 
         // Если у элемента есть DataMatrix код, удаляем его также из datamatrixArray
         if (lastItem.dataMatrix != null && lastItem.dataMatrix!.isNotEmpty) {
-          datamatrixArray
-              .removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
+          datamatrixArray.removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
         }
-
-        // Удаляем также из списка noMarkingItems, если элемент был без маркировки
-        noMarkingItems.removeWhere((item) => item.barcode == lastItem.barcode);
+        saveItems();
       }
     });
   }
@@ -490,11 +507,7 @@ class _ScanningViewState extends State<ScanningView> {
                   if (value == 'send') {
                     showSendDialog();
                   } else if (value == 'clear') {
-                    setState(() {
-                      barcodeArray.clear();
-                      datamatrixArray.clear();
-                      noMarkingItems.clear();
-                    });
+                    clearItems();
                   } else if (value == 'del') {
                     deleteLastScannedItem();
                   }
@@ -506,7 +519,7 @@ class _ScanningViewState extends State<ScanningView> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'Версия: 1.1.5',
+              'v: 1.1.5',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

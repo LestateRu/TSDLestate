@@ -83,7 +83,7 @@ class _LoginState extends State<Login> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'Версия: 1.1.5',
+              'v: 1.1.5',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
