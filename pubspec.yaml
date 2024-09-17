@@ -1,7 +1,7 @@
 name: lestate_tsd_new
 description: "Приложение ТСД для компании Lestate."
 
-version: 1.1.5
+version: 1.1.6
 
 environment:
   sdk: '>=3.4.3 <4.0.0'

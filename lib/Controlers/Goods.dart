@@ -1,36 +1,37 @@
 class Goods {
-  final String vendorCode;
-  final bool marking;
-  final String barcode;
-  final String batch;
-  String dataMatrix ='';
+  String barcode;
+  String vendorCode;
+  String batch;
+  bool marking;
+  String? dataMatrix;
   int count = 1;
 
   Goods({
-    required this.vendorCode,
-    required this.marking,
     required this.barcode,
+    required this.vendorCode,
     required this.batch,
-    required this.dataMatrix,
+    required this.marking,
+    this.dataMatrix,
     required this.count,
   });
 
   factory Goods.fromJson(Map<String, dynamic> json) {
     return Goods(
-      vendorCode: json['vendorCode'],
-      marking: json['marking'],
       barcode: json['barcode'],
+      vendorCode: json['vendorCode'],
       batch: json['batch'],
-      dataMatrix: '',
-      count: 1
+      marking: json['marking'],
+      dataMatrix: json['dataMatrix'],
+      count: 1,
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
-      'vendorCode': vendorCode,
-      'marking': marking,
       'barcode': barcode,
+      'vendorCode': vendorCode,
       'batch': batch,
+      'marking': marking,
       'dataMatrix': dataMatrix,
       'count': count,
     };

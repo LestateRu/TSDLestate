@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';  // Импорт пакета dart:io для работы с файлами
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';  // Импорт path_provider для получения пути к файлу
+import 'package:path_provider/path_provider.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 
@@ -125,7 +125,7 @@ class _ScanningViewState extends State<ScanningView> {
           });
         }
       } else {
-        showError();
+        showError(Httpclient.error);
       }
     } else {
       String newScanData = scanData.substring(3, 16);
@@ -152,7 +152,7 @@ class _ScanningViewState extends State<ScanningView> {
           });
         }
       } else {
-        showError();
+        showError(Httpclient.error);
       }
     }
   }
@@ -179,6 +179,7 @@ class _ScanningViewState extends State<ScanningView> {
             datamatrixArray.insert(0, newItem);
             _awaitingMarkingScan = false;
             _currentMarkedItem = null;
+            saveItems();
           });
         }
       } else {
@@ -227,13 +228,13 @@ class _ScanningViewState extends State<ScanningView> {
     );
   }
 
-  void showError() {
+  void showError(String error) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Ошибка'),
-          content: Text(Httpclient.error),
+          content: Text(error),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -271,6 +272,9 @@ class _ScanningViewState extends State<ScanningView> {
 
     if (Httpclient.result) {
       clearItems();
+    }
+    else {
+      showError('Отправка данных не удалась. Повторите отправку еще раз.');
     }
   }
 
@@ -320,6 +324,7 @@ class _ScanningViewState extends State<ScanningView> {
         noMarkingItems.add(newItem);
         _awaitingMarkingScan = false;
         _currentMarkedItem = null;
+        saveItems();
       });
     }
   }
@@ -519,7 +524,7 @@ class _ScanningViewState extends State<ScanningView> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.5',
+              'v: 1.1.6',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
