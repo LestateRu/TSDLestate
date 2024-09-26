@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lestate_tsd_new/Controlers/LoggerService.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
@@ -30,10 +31,14 @@ class _ScanningViewState extends State<ScanningView> {
   bool _awaitingMarkingScan = false;
   Goods? _currentMarkedItem;
   late File saveFile;  // Файл для сохранения данных
+  late LoggerService logger;
 
   @override
   void initState() {
     super.initState();
+    logger = LoggerService();
+    logger.initializeLogFile();
+
     _eventChannel.receiveBroadcastStream().listen((event) {
       _scanData = event;
       if (_awaitingMarkingScan) {
@@ -51,6 +56,7 @@ class _ScanningViewState extends State<ScanningView> {
     setState(() {
       goods = fetchedGoods;
     });
+    await logger.log('ШК из 1С получены');
   }
 
   // Инициализация файла для сохранения данных
@@ -87,6 +93,7 @@ class _ScanningViewState extends State<ScanningView> {
             .map((item) => Goods.fromJson(item))
             .toList();
       });
+      await logger.log('Сохраненные данные предидущего сканирования - загружены');
     }
   }
 
@@ -98,6 +105,7 @@ class _ScanningViewState extends State<ScanningView> {
       'noMarkingItems': noMarkingItems.map((item) => item.toJson()).toList(),
     };
     await saveFile.writeAsString(jsonEncode(jsonData));
+    //await logger.log('Данные сканирования сохранены');
   }
 
   void scanning(String scanData) async {
@@ -127,7 +135,7 @@ class _ScanningViewState extends State<ScanningView> {
       } else {
         showError(Httpclient.error);
       }
-    } else {
+    } else if (scanData.length > 15) {
       String newScanData = scanData.substring(3, 16);
       Goods? foundItem2 = goods.firstWhere((item) => item.barcode == newScanData);
 
@@ -154,6 +162,8 @@ class _ScanningViewState extends State<ScanningView> {
       } else {
         showError(Httpclient.error);
       }
+    } else {
+    await logger.log('Указанный ШК или маркировка не найдены - $scanData');
     }
   }
 
@@ -255,6 +265,7 @@ class _ScanningViewState extends State<ScanningView> {
   }
 
   Future<void> onButtonClicked(String comment) async {
+    await logger.log('Нажата кнопка - Отправить данные');
     var itemStrings = barcodeArray
         .map((item) => {'barcode': item.barcode, 'count': item.count})
         .toList();
@@ -271,28 +282,55 @@ class _ScanningViewState extends State<ScanningView> {
     await Httpclient.setMovementosGoods(combinedString);
 
     if (Httpclient.result) {
+      await logger.log('Данные отправлены - ${barcodeArray.length} товаров');
       clearItems();
+      await logger.log('Данные Очищены после отправки');
     }
     else {
       showError('Отправка данных не удалась. Повторите отправку еще раз.');
     }
   }
 
-  // Очистка списка и файла
   void clearItems() async {
-    setState(() {
-      barcodeArray.clear();
-      datamatrixArray.clear();
-      noMarkingItems.clear();
-    });
-    await saveFile.writeAsString(jsonEncode({
-      'barcodeArray': [],
-      'datamatrixArray': [],
-      'noMarkingItems': [],
-    }));
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Подтверждение'),
+          content: const Text('Вы уверены, что хотите очистить все данные?'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Нет'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Да'),
+              onPressed: () async {
+                // Очищаем данные
+                setState(() {
+                  barcodeArray.clear();
+                  datamatrixArray.clear();
+                  noMarkingItems.clear();
+                });
+                await saveFile.writeAsString(jsonEncode({
+                  'barcodeArray': [],
+                  'datamatrixArray': [],
+                  'noMarkingItems': [],
+                }));
+                await logger.log('Нажата кнопка - Очистить все данные');
+
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  void deleteLastScannedItem() {
+  Future<void> deleteLastScannedItem() async {
     setState(() async {
       if (barcodeArray.isNotEmpty) {
         Goods lastItem = barcodeArray.removeAt(0);
@@ -302,8 +340,10 @@ class _ScanningViewState extends State<ScanningView> {
           datamatrixArray.removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
         }
         saveItems();
+        await logger.log('Нажата кнопка - Удалить последний отсканированный элемент - $lastItem.barcode');
       }
     });
+
   }
 
   void handleNoMarking() {
@@ -524,7 +564,7 @@ class _ScanningViewState extends State<ScanningView> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.6',
+              'v: 1.1.7',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

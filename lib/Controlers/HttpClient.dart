@@ -4,14 +4,18 @@ import 'package:http/http.dart' as http;
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive_io.dart';
+import 'package:lestate_tsd_new/Controlers/LoggerService.dart';
 
 class Httpclient {
   static String username = '', password = '', postGUID = '', error = '';
   static bool result = false;
 
-  static Future<List<Goods>> getGoods() async {
-    String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
+  static final LoggerService _logger = LoggerService();
 
+
+  static Future<List<Goods>> getGoods() async {
+    await _logger.initializeLogFile();
+    String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
     List<Goods> goods = [];
 
     try {
@@ -20,10 +24,12 @@ class Httpclient {
         headers: {HttpHeaders.authorizationHeader: basicAuth},
       );
 
+      // Логирование успешного запроса
+      await _logger.log('Запрос на получение товаров: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final directory = await getTemporaryDirectory();
         final filePath = '${directory.path}/barcodes.zip';
-
         final file = File(filePath);
         await file.writeAsBytes(response.bodyBytes);
 
@@ -40,21 +46,26 @@ class Httpclient {
           }
         }
         error = 'JSON файл не найден в архиве.';
+        await _logger.error(error);
       } else if (response.statusCode == 401) {
         error = 'Неверный логин или пароль';
-      }
-      else {
+        await _logger.error(error);
+      } else {
         error = 'Ошибка сервера: ${response.statusCode}';
+        await _logger.error(error);
       }
     } on SocketException catch (e) {
       error = 'Ошибка сети: ${e.message}';
+      await _logger.error(error);
     } catch (e) {
       error = 'Неизвестная ошибка: ${e.toString()}';
+      await _logger.error(error);
     }
     return goods;
   }
 
   static Future<void> setMovementosGoods(String to1c) async {
+    await _logger.initializeLogFile();
     String basicAuth = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
 
     try {
@@ -66,16 +77,20 @@ class Httpclient {
         },
         body: to1c,
       );
+      await _logger.log('Отправка движения товаров: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         result = true;
       } else {
         error = 'Ошибка сервера при отправке данных: ${response.statusCode}';
+        await _logger.error(error);
       }
     } on SocketException catch (e) {
       error = 'Ошибка сети при отправке данных: ${e.message}';
+      await _logger.error(error);
     } catch (e) {
       error = 'Неизвестная ошибка при отправке данных: ${e.toString()}';
+      await _logger.error(error);
     }
   }
 }
