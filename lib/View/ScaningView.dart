@@ -283,8 +283,18 @@ class _ScanningViewState extends State<ScanningView> {
 
     if (Httpclient.result) {
       await logger.log('Данные отправлены - ${barcodeArray.length} товаров');
-      clearItems();
+      setState(() {
+        barcodeArray.clear();
+        datamatrixArray.clear();
+        noMarkingItems.clear();
+      });
+      await saveFile.writeAsString(jsonEncode({
+        'barcodeArray': [],
+        'datamatrixArray': [],
+        'noMarkingItems': [],
+      }));
       await logger.log('Данные Очищены после отправки');
+      Httpclient.result = false;
     }
     else {
       showError('Отправка данных не удалась. Повторите отправку еще раз.');

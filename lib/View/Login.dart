@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
@@ -73,6 +75,7 @@ class _LoginState extends State<Login> {
                       Httpclient.username = _username.text;
                       Httpclient.password = _password.text;
                       _showLoadingDialog();
+                      logger.deleteOldLogs();
                     });
                   },
                   child: const Text('Авторизация'),
