@@ -30,7 +30,7 @@ class _ScanningViewState extends State<ScanningView> {
   String zerro = '0';
   bool _awaitingMarkingScan = false;
   Goods? _currentMarkedItem;
-  late File saveFile;  // Файл для сохранения данных
+  late File saveFile; // Файл для сохранения данных
   late LoggerService logger;
 
   @override
@@ -48,7 +48,7 @@ class _ScanningViewState extends State<ScanningView> {
       }
     });
     getResult();
-    initializeFile();  // Инициализация файла
+    initializeFile(); // Инициализация файла
   }
 
   Future<void> getResult() async {
@@ -65,7 +65,7 @@ class _ScanningViewState extends State<ScanningView> {
     saveFile = File('${directory.path}/save.json');
 
     if (!(await saveFile.exists())) {
-      await saveFile.create();  // Создаем файл, если его нет
+      await saveFile.create(); // Создаем файл, если его нет
       await saveFile.writeAsString(jsonEncode({
         'barcodeArray': [],
         'datamatrixArray': [],
@@ -73,7 +73,7 @@ class _ScanningViewState extends State<ScanningView> {
       }));
     }
 
-    loadSavedItems();  // Загружаем сохранённые элементы, если есть
+    loadSavedItems(); // Загружаем сохранённые элементы, если есть
   }
 
   // Загрузка данных из файла
@@ -93,7 +93,8 @@ class _ScanningViewState extends State<ScanningView> {
             .map((item) => Goods.fromJson(item))
             .toList();
       });
-      await logger.log('Сохраненные данные предидущего сканирования - загружены');
+      await logger
+          .log('Сохраненные данные предидущего сканирования - загружены');
     }
   }
 
@@ -123,13 +124,14 @@ class _ScanningViewState extends State<ScanningView> {
             _awaitingMarkingScan = true;
             _currentMarkedItem = foundItem;
           });
-          textMessageController.text = "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
+          textMessageController.text =
+              "Отсканируйте маркировку для артикула: ${foundItem.vendorCode}";
         } else {
           setState(() {
             textMessageController.text = foundItem.vendorCode;
             batchController.text = foundItem.batch.toString();
             barcodeArray.insert(0, foundItem);
-            saveItems();  // Сохранение после добавления
+            saveItems(); // Сохранение после добавления
           });
         }
       } else {
@@ -137,40 +139,79 @@ class _ScanningViewState extends State<ScanningView> {
       }
     } else if (scanData.length > 15) {
       String newScanData = scanData.substring(3, 16);
-      Goods? foundItem2 = goods.firstWhere((item) => item.barcode == newScanData);
-
-      if (foundItem2 != null) {
-        if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
-          showDuplicateMarkingError();
-        } else {
-          Goods newItem = Goods(
-            barcode: foundItem2.barcode,
-            vendorCode: foundItem2.vendorCode,
-            batch: foundItem2.batch,
-            marking: foundItem2.marking,
-            dataMatrix: scanData,
-            count: foundItem2.count,
-          );
-          setState(() {
-            textMessageController.text = foundItem2.vendorCode;
-            batchController.text = foundItem2.batch.toString();
-            barcodeArray.insert(0, newItem);
-            datamatrixArray.insert(0, newItem);
-            saveItems();  // Сохранение после добавления
-          });
-        }
+      if (newScanData.startsWith('290')) {
+        showError("Сначала необходимо отсканировать ШК, затем маркировку");
       } else {
-        showError(Httpclient.error);
+        Goods? foundItem2 =
+            goods.firstWhere((item) => item.barcode == newScanData);
+
+        if (foundItem2 != null) {
+          if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
+            showDuplicateMarkingError();
+          } else {
+            Goods newItem = Goods(
+              barcode: foundItem2.barcode,
+              vendorCode: foundItem2.vendorCode,
+              batch: foundItem2.batch,
+              marking: foundItem2.marking,
+              tnvd: foundItem2.tnvd,
+              dataMatrix: scanData,
+              count: foundItem2.count,
+            );
+            setState(() {
+              textMessageController.text = foundItem2.vendorCode;
+              batchController.text = foundItem2.batch.toString();
+              barcodeArray.insert(0, newItem);
+              datamatrixArray.insert(0, newItem);
+              saveItems(); // Сохранение после добавления
+            });
+          }
+        } else {
+          showError(Httpclient.error);
+        }
       }
     } else {
-    await logger.log('Указанный ШК или маркировка не найдены - $scanData');
+      showError('Данный товар не найден!');
+      await logger.log('Указанный ШК или маркировка не найдены - $scanData');
     }
   }
 
   void processMarkingScan(String scanData) {
     if (_currentMarkedItem != null) {
+      bool tnvdTry = false;
+      if (_currentMarkedItem!.tnvd.startsWith('6101') ||
+          _currentMarkedItem!.tnvd.startsWith('6102') ||
+          _currentMarkedItem!.tnvd.startsWith('6103') ||
+          _currentMarkedItem!.tnvd.startsWith('6104') ||
+          _currentMarkedItem!.tnvd.startsWith('6105') ||
+          _currentMarkedItem!.tnvd.startsWith('6110') ||
+          _currentMarkedItem!.tnvd.startsWith('6203') ||
+          _currentMarkedItem!.tnvd.startsWith('6204') ||
+          _currentMarkedItem!.tnvd.startsWith('6205') ||
+          _currentMarkedItem!.tnvd.startsWith('6206') ||
+          _currentMarkedItem!.tnvd.startsWith('6210') ||
+          _currentMarkedItem!.tnvd.startsWith('6214') ||
+          _currentMarkedItem!.tnvd.startsWith('6215') ||
+          _currentMarkedItem!.tnvd.startsWith('4304000000') ||
+          _currentMarkedItem!.tnvd.startsWith('6112110000') ||
+          _currentMarkedItem!.tnvd.startsWith('6112120000') ||
+          _currentMarkedItem!.tnvd.startsWith('6112190000') ||
+          _currentMarkedItem!.tnvd.startsWith('6112200000') ||
+          _currentMarkedItem!.tnvd.startsWith('611300') ||
+          _currentMarkedItem!.tnvd.startsWith('6211200000') ||
+          _currentMarkedItem!.tnvd.startsWith('621132') ||
+          _currentMarkedItem!.tnvd.startsWith('621133') ||
+          _currentMarkedItem!.tnvd.startsWith('6211390000') ||
+          _currentMarkedItem!.tnvd.startsWith('621142') ||
+          _currentMarkedItem!.tnvd.startsWith('621143') ||
+          _currentMarkedItem!.tnvd.startsWith('621149000')) {
+        tnvdTry = true;
+      }
       if (scanData.length >= 20 &&
-          scanData.contains(_currentMarkedItem!.barcode)) {
+              scanData.contains(_currentMarkedItem!.barcode) ||
+          scanData.length >= 20 &&
+              scanData.contains('290') &&
+              tnvdTry == true) {
         if (datamatrixArray.any((item) => item.dataMatrix == scanData)) {
           showDuplicateMarkingError();
         } else {
@@ -179,6 +220,7 @@ class _ScanningViewState extends State<ScanningView> {
             vendorCode: _currentMarkedItem!.vendorCode,
             batch: _currentMarkedItem!.batch,
             marking: _currentMarkedItem!.marking,
+            tnvd: _currentMarkedItem!.tnvd,
             dataMatrix: scanData,
             count: _currentMarkedItem!.count,
           );
@@ -295,8 +337,7 @@ class _ScanningViewState extends State<ScanningView> {
       }));
       await logger.log('Данные Очищены после отправки');
       Httpclient.result = false;
-    }
-    else {
+    } else {
       showError('Отправка данных не удалась. Повторите отправку еще раз.');
     }
   }
@@ -347,13 +388,14 @@ class _ScanningViewState extends State<ScanningView> {
 
         // Если у элемента есть DataMatrix код, удаляем его также из datamatrixArray
         if (lastItem.dataMatrix != null && lastItem.dataMatrix!.isNotEmpty) {
-          datamatrixArray.removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
+          datamatrixArray
+              .removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
         }
         saveItems();
-        await logger.log('Нажата кнопка - Удалить последний отсканированный элемент - $lastItem.barcode');
+        await logger.log(
+            'Нажата кнопка - Удалить последний отсканированный элемент - $lastItem.barcode');
       }
     });
-
   }
 
   void handleNoMarking() {
@@ -363,6 +405,7 @@ class _ScanningViewState extends State<ScanningView> {
         vendorCode: _currentMarkedItem!.vendorCode,
         batch: _currentMarkedItem!.batch,
         marking: _currentMarkedItem!.marking,
+        tnvd: _currentMarkedItem!.tnvd,
         dataMatrix: 'Нет маркировки',
         count: _currentMarkedItem!.count,
       );
@@ -574,7 +617,7 @@ class _ScanningViewState extends State<ScanningView> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.7',
+              'v: 1.1.8t',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

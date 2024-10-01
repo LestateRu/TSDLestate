@@ -87,7 +87,7 @@ class _LoginState extends State<Login> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.7',
+              'v: 1.1.8t',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

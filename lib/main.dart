@@ -89,7 +89,7 @@ class _UpdateCheckerState extends State<UpdateChecker> {
   }
 
   Future<void> checkForUpdate() async {
-    String currentVersion = '1.1.7';
+    String currentVersion = '1.1.8';
     const String versionUrl = 'http://1c.sportpoint.ru:5055/tsd/version.json';
 
     try {

@@ -20,7 +20,7 @@ class Httpclient {
 
     try {
       final response = await http.get(
-        Uri.parse('http://1c.sportpoint.ru:5055/retail/hs/apitsd/barcodes'),
+        Uri.parse('https://still-ghoul-star.ngrok-free.app/retail/hs/apitsd/barcodes'),
         headers: {HttpHeaders.authorizationHeader: basicAuth},
       );
 
@@ -70,7 +70,7 @@ class Httpclient {
 
     try {
       final response = await http.post(
-        Uri.parse('http://1c.sportpoint.ru:5055/retail/hs/apitsd/data'),
+        Uri.parse('https://still-ghoul-star.ngrok-free.app/retail/hs/apitsd/data'),
         headers: {
           HttpHeaders.authorizationHeader: basicAuth,
           HttpHeaders.contentTypeHeader: 'application/json',

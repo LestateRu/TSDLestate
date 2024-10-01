@@ -3,6 +3,7 @@ class Goods {
   String vendorCode;
   String batch;
   bool marking;
+  String tnvd;
   String? dataMatrix;
   int count = 1;
 
@@ -11,6 +12,7 @@ class Goods {
     required this.vendorCode,
     required this.batch,
     required this.marking,
+    required this.tnvd,
     this.dataMatrix,
     required this.count,
   });
@@ -21,6 +23,7 @@ class Goods {
       vendorCode: json['vendorCode'],
       batch: json['batch'],
       marking: json['marking'],
+      tnvd: json['tnvd'],
       dataMatrix: json['dataMatrix'],
       count: 1,
     );
@@ -32,6 +35,7 @@ class Goods {
       'vendorCode': vendorCode,
       'batch': batch,
       'marking': marking,
+      'tnvd': tnvd,
       'dataMatrix': dataMatrix,
       'count': count,
     };
