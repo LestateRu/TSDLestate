@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lestate_tsd_new/Controlers/LoggerService.dart';
 import 'dart:io';
 import 'package:lestate_tsd_new/View/Login.dart';
 import 'package:http/http.dart' as http;
@@ -59,13 +58,10 @@ class UpdateChecker extends StatefulWidget {
 }
 
 class _UpdateCheckerState extends State<UpdateChecker> {
-  late LoggerService logger;
 
   @override
   void initState() {
     super.initState();
-    logger = LoggerService();
-    logger.initializeLogFile();
   }
 
   @override
@@ -89,7 +85,7 @@ class _UpdateCheckerState extends State<UpdateChecker> {
   }
 
   Future<void> checkForUpdate() async {
-    String currentVersion = '1.1.8';
+    String currentVersion = '1.1.10';
     const String versionUrl = 'http://1c.sportpoint.ru:5055/tsd/version.json';
 
     try {
@@ -104,11 +100,9 @@ class _UpdateCheckerState extends State<UpdateChecker> {
         }
       } else {
         showErrorDialog(context, 'Ошибка проверки обновления. Код: ${response.statusCode}');
-        await logger.error('Ошибка проверки обновления. Код: ${response.statusCode}');
       }
     } catch (e) {
       showErrorDialog(context, 'Произошла ошибка при проверке обновления: $e');
-      await logger.error('Произошла ошибка при проверке обновления: $e');
     }
   }
 
@@ -140,7 +134,6 @@ class _UpdateCheckerState extends State<UpdateChecker> {
   }
 
   Future<void> _downloadAndInstallApk(String apkUrl) async {
-    await logger.log('Начата загрузка APK');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -173,21 +166,17 @@ class _UpdateCheckerState extends State<UpdateChecker> {
         // Закрыть диалог загрузки
         Navigator.of(context, rootNavigator: true).pop();
 
-        await logger.log('Начата установка APK');
         AppInstaller.installApk(filePath).then((_) {
         }).catchError((e) async {
           showErrorDialog(context, 'Произошла ошибка при установке APK: $e');
-          await logger.error('Произошла ошибка при установке APK: $e');
         });
       } else {
         Navigator.of(context, rootNavigator: true).pop();
         showErrorDialog(context, 'Ошибка загрузки APK. Код ответа: ${response.statusCode}');
-        await logger.error('Ошибка загрузки APK. Код ответа: ${response.statusCode}');
       }
     } catch (e) {
       Navigator.of(context, rootNavigator: true).pop();
       showErrorDialog(context, 'Произошла ошибка при загрузке APK: $e');
-      await logger.error('Произошла ошибка при загрузке APK: $e');
     }
   }
 }

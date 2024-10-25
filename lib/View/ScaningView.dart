@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lestate_tsd_new/Controlers/LoggerService.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
@@ -31,13 +30,10 @@ class _ScanningViewState extends State<ScanningView> {
   bool _awaitingMarkingScan = false;
   Goods? _currentMarkedItem;
   late File saveFile; // Файл для сохранения данных
-  late LoggerService logger;
 
   @override
   void initState() {
     super.initState();
-    logger = LoggerService();
-    logger.initializeLogFile();
 
     _eventChannel.receiveBroadcastStream().listen((event) {
       _scanData = event;
@@ -56,7 +52,6 @@ class _ScanningViewState extends State<ScanningView> {
     setState(() {
       goods = fetchedGoods;
     });
-    await logger.log('ШК из 1С получены');
   }
 
   // Инициализация файла для сохранения данных
@@ -93,8 +88,6 @@ class _ScanningViewState extends State<ScanningView> {
             .map((item) => Goods.fromJson(item))
             .toList();
       });
-      await logger
-          .log('Сохраненные данные предидущего сканирования - загружены');
     }
   }
 
@@ -172,7 +165,6 @@ class _ScanningViewState extends State<ScanningView> {
       }
     } else {
       showError('Данный товар не найден!');
-      await logger.log('Указанный ШК или маркировка не найдены - $scanData');
     }
   }
 
@@ -185,6 +177,8 @@ class _ScanningViewState extends State<ScanningView> {
           _currentMarkedItem!.tnvd.startsWith('6104') ||
           _currentMarkedItem!.tnvd.startsWith('6105') ||
           _currentMarkedItem!.tnvd.startsWith('6110') ||
+          _currentMarkedItem!.tnvd.startsWith('6201') ||
+          _currentMarkedItem!.tnvd.startsWith('6202') ||
           _currentMarkedItem!.tnvd.startsWith('6203') ||
           _currentMarkedItem!.tnvd.startsWith('6204') ||
           _currentMarkedItem!.tnvd.startsWith('6205') ||
@@ -307,7 +301,6 @@ class _ScanningViewState extends State<ScanningView> {
   }
 
   Future<void> onButtonClicked(String comment) async {
-    await logger.log('Нажата кнопка - Отправить данные');
     var itemStrings = barcodeArray
         .map((item) => {'barcode': item.barcode, 'count': item.count})
         .toList();
@@ -324,7 +317,6 @@ class _ScanningViewState extends State<ScanningView> {
     await Httpclient.setMovementosGoods(combinedString);
 
     if (Httpclient.result) {
-      await logger.log('Данные отправлены - ${barcodeArray.length} товаров');
       setState(() {
         barcodeArray.clear();
         datamatrixArray.clear();
@@ -335,7 +327,6 @@ class _ScanningViewState extends State<ScanningView> {
         'datamatrixArray': [],
         'noMarkingItems': [],
       }));
-      await logger.log('Данные Очищены после отправки');
       Httpclient.result = false;
     } else {
       showError('Отправка данных не удалась. Повторите отправку еще раз.');
@@ -370,8 +361,6 @@ class _ScanningViewState extends State<ScanningView> {
                   'datamatrixArray': [],
                   'noMarkingItems': [],
                 }));
-                await logger.log('Нажата кнопка - Очистить все данные');
-
                 Navigator.of(context).pop();
               },
             ),
@@ -392,8 +381,6 @@ class _ScanningViewState extends State<ScanningView> {
               .removeWhere((item) => item.dataMatrix == lastItem.dataMatrix);
         }
         saveItems();
-        await logger.log(
-            'Нажата кнопка - Удалить последний отсканированный элемент - $lastItem.barcode');
       }
     });
   }
@@ -617,7 +604,7 @@ class _ScanningViewState extends State<ScanningView> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.8t',
+              'v: 1.1.10',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

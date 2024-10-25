@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:lestate_tsd_new/Controlers/Goods.dart';
 import 'package:lestate_tsd_new/Controlers/HttpClient.dart';
-import 'package:lestate_tsd_new/Controlers/LoggerService.dart';
 import 'package:lestate_tsd_new/View/ScaningView.dart';
 import 'package:lestate_tsd_new/main.dart';
 
@@ -18,13 +17,10 @@ class Login extends StatefulWidget {
 class _LoginState extends State<Login> {
   TextEditingController _username = TextEditingController();
   TextEditingController _password = TextEditingController();
-  late LoggerService logger;
 
   @override
   void initState() {
     super.initState();
-    logger = LoggerService();
-    logger.initializeLogFile();
   }
 
 
@@ -75,7 +71,6 @@ class _LoginState extends State<Login> {
                       Httpclient.username = _username.text;
                       Httpclient.password = _password.text;
                       _showLoadingDialog();
-                      logger.deleteOldLogs();
                     });
                   },
                   child: const Text('Авторизация'),
@@ -87,7 +82,7 @@ class _LoginState extends State<Login> {
             bottom: 16.0,
             right: 16.0,
             child: Text(
-              'v: 1.1.8t',
+              'v: 1.1.10',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,
@@ -118,7 +113,6 @@ class _LoginState extends State<Login> {
     );
 
     _processJsonFile().then((success) async {
-      await logger.log('Авторизован пользователь - ${_username.text}');
       Navigator.pop(context);
       if (success) {
         Navigator.push(
